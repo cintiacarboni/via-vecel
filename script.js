@@ -1,71 +1,91 @@
 const chat = document.getElementById("chat");
 const input = document.getElementById("inputMsg");
 const sendBtn = document.getElementById("send");
+const micBtn = document.getElementById("micBtn");
 
-sendBtn.addEventListener("click", sendMessage);
-input.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") sendMessage();
-});
-
-function addMessage(text, sender) {
+// 👉 Agrega un mensaje al chat
+function addMessage(text, sender = "via") {
   const div = document.createElement("div");
-  div.className = sender;
+  div.classList.add("message", sender);
   div.textContent = text;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 }
 
+// 👉 Enviar mensaje al backend /api/chat
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
+  // Muestra el mensaje del usuario
   addMessage(text, "user");
   input.value = "";
 
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: text }),
-  });
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }), // el backend lee "message"
+    });
 
-  const data = await res.json();
-  addMessage(data.reply, "via");
+    const data = await res.json();
+
+    if (data.reply) {
+      addMessage(data.reply, "via");
+    } else if (data.error) {
+      addMessage("Hubo un error: " + data.error, "via");
+    } else {
+      addMessage("No recibí respuesta de VIA.", "via");
+    }
+  } catch (err) {
+    console.error(err);
+    addMessage("Ups, hubo un problema hablando con VIA.", "via");
+  }
 }
-// 🎤 MICROFONO – Speech to Text
-const micBtn = document.getElementById("micBtn");
 
-let recognition;
-if ("webkitSpeechRecognition" in window) {
-    recognition = new webkitSpeechRecognition();
-    recognition.lang = "es-ES";    // idioma base
-    recognition.continuous = false;
-    recognition.interimResults = false;
+// Eventos: click y Enter
+sendBtn.addEventListener("click", sendMessage);
 
-    recognition.onresult = function (event) {
-        const texto = event.results[0][0].transcript;
-        input.value = texto; 
-        sendMessage(); 
-    };
+input.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
 
-    recognition.onerror = function (event) {
-        console.error("Error micrófono:", event.error);
-        addMessage("No pude escuchar bien. Probá de nuevo.", "via");
-    };
+// 🟦 Mensaje de bienvenida
+addMessage("¡Hola! Soy VIA, tu asistente turística para Argentina. ¿En qué te ayudo hoy?", "via");
+
+// 🎤 MICROFONO – Web Speech API
+let recognition = null;
+
+if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = "es-ES"; // idioma base (podés cambiarlo)
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onresult = (event) => {
+    const texto = event.results[0][0].transcript;
+    input.value = texto;
+    sendMessage(); // envía automáticamente lo que se dijo
+  };
+
+  recognition.onerror = (event) => {
+    console.error("Error micrófono:", event.error);
+    addMessage("No pude escuchar bien. Probá de nuevo.", "via");
+  };
+
+  recognition.onend = () => {
+    micBtn.classList.remove("listening");
+  };
 }
 
 micBtn.addEventListener("click", () => {
-    if (!recognition) {
-        addMessage("Tu navegador no permite usar micrófono.", "via");
-        return;
-    }
+  if (!recognition) {
+    addMessage("Tu navegador no permite usar micrófono.", "via");
+    return;
+  }
 
-    recognition.start();
-    micBtn.style.background = "#00aaff";
-    micBtn.textContent = "🎙️";
-
-    recognition.onend = () => {
-        micBtn.style.background = "";
-        micBtn.textContent = "🎤";
-    };
+  micBtn.classList.add("listening");
+  recognition.start();
 });
 
