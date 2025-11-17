@@ -118,6 +118,7 @@ if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
   });
 }
 fix script syntax
+}
 
 
 
