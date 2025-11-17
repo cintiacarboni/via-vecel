@@ -1,0 +1,74 @@
+body {
+  background: #111;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: white;
+}
+
+.app {
+  width: 100%;
+  max-width: 420px;
+  margin: auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #222;
+  border-right: 1px solid #222;
+}
+
+header {
+  background: #00bcd4;
+  padding: 15px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+main {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user, .via {
+  padding: 10px;
+  border-radius: 12px;
+  max-width: 80%;
+}
+
+.user {
+  background: #00bcd4;
+  align-self: flex-end;
+}
+
+.via {
+  background: #333;
+  align-self: flex-start;
+}
+
+footer {
+  display: flex;
+  padding: 10px;
+  gap: 10px;
+  background: #000;
+}
+
+input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+}
+
+button {
+  background: #00bcd4;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
