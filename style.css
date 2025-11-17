@@ -101,4 +101,11 @@ header {
 #micBtn.listening {
   background: #00c8e2;
 }
+footer {
+  padding-bottom: 12px; /* evita que el teclado tape el input */
+}
+input {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 
