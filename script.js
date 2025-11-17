@@ -31,3 +31,41 @@ async function sendMessage() {
   const data = await res.json();
   addMessage(data.reply, "via");
 }
+// 🎤 MICROFONO – Speech to Text
+const micBtn = document.getElementById("micBtn");
+
+let recognition;
+if ("webkitSpeechRecognition" in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = "es-ES";    // idioma base
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = function (event) {
+        const texto = event.results[0][0].transcript;
+        input.value = texto; 
+        sendMessage(); 
+    };
+
+    recognition.onerror = function (event) {
+        console.error("Error micrófono:", event.error);
+        addMessage("No pude escuchar bien. Probá de nuevo.", "via");
+    };
+}
+
+micBtn.addEventListener("click", () => {
+    if (!recognition) {
+        addMessage("Tu navegador no permite usar micrófono.", "via");
+        return;
+    }
+
+    recognition.start();
+    micBtn.style.background = "#00aaff";
+    micBtn.textContent = "🎙️";
+
+    recognition.onend = () => {
+        micBtn.style.background = "";
+        micBtn.textContent = "🎤";
+    };
+});
+
