@@ -5,7 +5,7 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// 🧠 Instrucciones de VIA (pegá acá tu prompt completo, versión optimizada)
+// 🧠 Instrucciones de VIA (prompt principal)
 const SYSTEM = `
  IDENTIDAD
 
@@ -164,34 +164,85 @@ Nunca inventar datos.
 Priorizar utilidad y experiencia del viajero.
 `;
 
+// ===============================
+// HANDLER HTTP
+// ===============================
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método no permitido" });
   }
 
   try {
-    // El front manda { message: "texto" } – por las dudas acepto "mensaje" también
-    const { message, mensaje } = req.body || {};
+    // El front ahora manda: { message, mode, targetLang, source }
+    const { message, mensaje, mode, targetLang } = req.body || {};
     const texto = message || mensaje;
 
     if (!texto) {
       return res.status(400).json({ error: "Falta el texto del usuario" });
     }
 
+    const finalMode = mode || "chat";
+    let userContent = "";
+
+    // ===============================
+    // MODO TRADUCCIÓN
+    // ===============================
+    if (finalMode === "translation" && targetLang) {
+      userContent = `
+Actúa como traductor profesional.
+Traduce el siguiente texto al idioma "${targetLang}".
+
+Reglas IMPORTANTES:
+- No expliques nada.
+- No agregues comentarios.
+- No saludes.
+- Devuelve SOLO la traducción, sin texto extra.
+
+Texto:
+${texto}
+`;
+    }
+    // ===============================
+    // MODO INTÉRPRETE
+    // ===============================
+    else if (finalMode === "interpreter") {
+      userContent = `
+Actúa como intérprete en una conversación en tiempo casi real.
+
+Reglas:
+- Responde con mensajes cortos, naturales y claros.
+- Usa el mismo idioma que está usando el usuario.
+- Si el usuario mezcla idiomas, prioriza el idioma principal del mensaje.
+- No expliques que eres un intérprete, solo responde como si estuvieras en la charla.
+
+Mensaje del usuario:
+${texto}
+`;
+    }
+    // ===============================
+    // MODO CHAT NORMAL
+    // ===============================
+    else {
+      userContent = texto;
+    }
+
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: SYSTEM },
-        { role: "user", content: texto },
+        { role: "user", content: userContent },
       ],
     });
 
     const reply = completion.choices[0].message.content;
 
-    return res.status(200).json({ reply });
+    return res.status(200).json({
+      reply,
+      replyLang: null, // si más adelante querés detectar idioma de salida, acá se puede completar
+    });
   } catch (error) {
     console.error("ERROR VIA:", error?.response?.data || error);
-    // No sabemos el código exacto, pero devolvemos 500 para el front
     return res.status(500).json({ error: "Error al conectar con VIA" });
   }
 }
+
