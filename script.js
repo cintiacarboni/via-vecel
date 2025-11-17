@@ -1,8 +1,28 @@
+// ELEMENTOS DEL DOM
 const chat = document.getElementById("chat");
 const input = document.getElementById("inputMsg");
 const sendBtn = document.getElementById("send");
 const micBtn = document.getElementById("micBtn");
 
+// 🔊 VOZ DE VIA (Text-to-Speech)
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+
+  // Heurística simple: si tiene acentos/ñ -> español, si no -> inglés
+  const hasSpanishChars = /[áéíóúñ¿¡]/i.test(text);
+  const lang = hasSpanishChars ? "es-ES" : "en-US";
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang;
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+// 👉 agrega un mensaje al chat
 function addMessage(text, sender = "via") {
   const div = document.createElement("div");
   div.classList.add("message", sender);
@@ -10,39 +30,18 @@ function addMessage(text, sender = "via") {
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 
-  // 🔊 Si el mensaje es de VIA, lo leemos en voz alta
+  // si el mensaje es de VIA, lo leemos
   if (sender === "via") {
     speak(text);
   }
 }
-// 🔊 VOZ DE VIA (Text-to-Speech)
-function speak(text) {
-  // Si el navegador no soporta voz, salimos
-  if (!("speechSynthesis" in window)) return;
 
-  // Pequeño truco para elegir idioma:
-  // si tiene acentos/ñ -> español, si no -> inglés
-  const hasSpanishChars = /[áéíóúñ¿¡]/i.test(text);
-  const lang = hasSpanishChars ? "es-ES" : "en-US";
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang;
-  utterance.rate = 1;        // velocidad normal
-  utterance.pitch = 1;       // tono normal
-  utterance.volume = 1;      // volumen máximo
-
-  window.speechSynthesis.cancel(); // corta cualquier voz anterior
-  window.speechSynthesis.speak(utterance);
-}
-
-}
-
-// 👉 Enviar mensaje al backend /api/chat
+// 👉 envía el mensaje al backend /api/chat
 async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  // Muestra el mensaje del usuario
+  // muestra mensaje del usuario
   addMessage(text, "user");
   input.value = "";
 
@@ -50,7 +49,7 @@ async function sendMessage() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text }), // el backend lee "message"
+      body: JSON.stringify({ message: text }),
     });
 
     const data = await res.json();
@@ -68,30 +67,35 @@ async function sendMessage() {
   }
 }
 
-// Eventos: click y Enter
+// EVENTOS: click y Enter
 sendBtn.addEventListener("click", sendMessage);
 
 input.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendMessage();
 });
 
-// 🟦 Mensaje de bienvenida
-addMessage("¡Hola! Soy VIA, tu asistente turística para Argentina. ¿En qué te ayudo hoy?", "via");
+// Mensaje de bienvenida
+addMessage(
+  "¡Hola! Soy VIA, tu asistente turística para Argentina. ¿En qué te ayudo hoy?",
+  "via"
+);
 
 // 🎤 MICROFONO – Web Speech API
 let recognition = null;
 
-if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
   recognition = new SpeechRecognition();
-  recognition.lang = "es-ES"; // idioma base (podés cambiarlo)
+  recognition.lang = "es-ES";
   recognition.continuous = false;
   recognition.interimResults = false;
 
   recognition.onresult = (event) => {
     const texto = event.results[0][0].transcript;
     input.value = texto;
-    sendMessage(); // envía automáticamente lo que se dijo
+    sendMessage();
   };
 
   recognition.onerror = (event) => {
@@ -102,16 +106,14 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
   recognition.onend = () => {
     micBtn.classList.remove("listening");
   };
-}
 
-micBtn.addEventListener("click", () => {
-  if (!recognition) {
+  micBtn.addEventListener("click", () => {
+    micBtn.classList.add("listening");
+    recognition.start();
+  });
+} else {
+  // Si el navegador no soporta micrófono
+  micBtn.addEventListener("click", () => {
     addMessage("Tu navegador no permite usar micrófono.", "via");
-    return;
-  }
-
-  micBtn.classList.add("listening");
-  recognition.start();
-});
-
-
+  });
+}
