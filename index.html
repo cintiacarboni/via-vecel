@@ -20,9 +20,15 @@
 </head>
 <body>
   <div class="app">
-    <header>VIA</header>
+    <!-- 🔹 HEADER TIPO WHATSAPP: ICONO + NOMBRE -->
+    <header class="app-header">
+      <img src="/icons/via-192.png" alt="VIA" class="logo-icon" />
+      <div class="logo-text">
+        <span class="logo-word">Viajar</span><span class="logo-ia">IA</span>
+      </div>
+    </header>
 
-    <!-- 🔹 NUEVO: Controles de modos e idioma -->
+    <!-- Controles de modos e idioma -->
     <div class="modes">
       <button id="interpToggle">🎧 Intérprete: OFF</button>
       <button id="translateToggle">🌍 Traducción: OFF</button>
@@ -36,7 +42,6 @@
         <option value="it">Italiano</option>
       </select>
     </div>
-    <!-- 🔹 FIN BLOQUE NUEVO -->
 
     <main id="chat"></main>
 
