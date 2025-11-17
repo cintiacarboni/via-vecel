@@ -4,31 +4,33 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// ⚠️ PEGÁ ACÁ TODAS LAS INSTRUCCIONES DE VIA (COMPLETAS)
+const SYSTEM = `
+[ACA PEGARÁS EL BLOQUE DE INSTRUCCIONES DE VIA]
+`;
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    res.status(405).json({ error: "Método no permitido" });
-    return;
+    return res.status(405).json({ error: "Método no permitido" });
   }
 
   try {
-    const { message } = req.body;
+    const { mensaje } = req.body;
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        {
-          role: "system",
-          content:
-            "Eres VIA, una asistente turística inteligente para Argentina. Respondes claro, breve y práctico. Ayudas con destinos, clima, alojamiento, rutas, transporte, costos y traducción básica. No inventes links de reserva.",
-        },
-        { role: "user", content: message },
-      ],
+        { role: "system", content: SYSTEM },
+        { role: "user", content: mensaje }
+      ]
     });
 
-    const reply = completion.choices[0].message.content;
-    res.status(200).json({ reply });
+    res.status(200).json({
+      reply: completion.choices[0].message.content,
+    });
+
   } catch (error) {
-    console.error("Error en VIA:", error);
-    res.status(500).json({ error: "Error procesando la solicitud" });
+    console.error("ERROR API VIA:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 }
