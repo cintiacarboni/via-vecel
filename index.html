@@ -9,13 +9,24 @@
 <body>
   <div class="app">
     <header>VIA</header>
+
     <main id="chat"></main>
-    <footer>
-      <input id="inputMsg" type="text" placeholder="Escribe aquí..." />
-      <button id="send">Enviar</button>
+
+    <footer class="footer">
+      <div class="input-area">
+        <button id="micBtn" aria-label="Hablar con VIA">🎤</button>
+        <input
+          id="inputMsg"
+          type="text"
+          placeholder="Escribe aquí..."
+          autocomplete="off"
+        />
+        <button id="send">Enviar</button>
+      </div>
     </footer>
   </div>
 
   <script src="script.js"></script>
 </body>
 </html>
+
