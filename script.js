@@ -117,8 +117,8 @@ if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
     addMessage("Tu navegador no permite usar micrófono.", "via");
   });
 }
-fix script syntax
-}
+
+
 
 
 
