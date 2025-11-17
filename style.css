@@ -107,5 +107,55 @@ footer {
 input {
   padding-bottom: env(safe-area-inset-bottom);
 }
+/* --- MODO INTÉRPRETE / TRADUCCIÓN --- */
+.modes {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  flex-wrap: wrap;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.modes button {
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #00c8e2;
+  background: white;
+  cursor: pointer;
+}
+
+.modes button.on {
+  background: #00c8e2;
+  color: white;
+  font-weight: bold;
+  border: 1px solid #0098b3;
+}
+
+.modes label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.modes select {
+  padding: 6px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #00c8e2;
+}
+
+/* --- MICRÓFONO ESCUCHANDO --- */
+#micBtn.listening {
+  border: 2px solid red !important;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.6); }
+  100% { box-shadow: 0 0 10px 6px rgba(255,0,0,0); }
+}
+
 
 
