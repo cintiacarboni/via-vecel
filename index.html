@@ -22,6 +22,22 @@
   <div class="app">
     <header>VIA</header>
 
+    <!-- 🔹 NUEVO: Controles de modos e idioma -->
+    <div class="modes">
+      <button id="interpToggle">🎧 Intérprete: OFF</button>
+      <button id="translateToggle">🌍 Traducción: OFF</button>
+
+      <label for="targetLang">Idioma destino:</label>
+      <select id="targetLang">
+        <option value="en">Inglés</option>
+        <option value="es">Español</option>
+        <option value="pt">Portugués</option>
+        <option value="fr">Francés</option>
+        <option value="it">Italiano</option>
+      </select>
+    </div>
+    <!-- 🔹 FIN BLOQUE NUEVO -->
+
     <main id="chat"></main>
 
     <footer class="footer">
@@ -41,5 +57,6 @@
   <script src="script.js"></script>
 </body>
 </html>
+
 
 
