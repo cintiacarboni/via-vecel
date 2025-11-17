@@ -30,7 +30,7 @@ function addMessage(text, sender = "via") {
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 
-  // si el mensaje es de VIA, lo leemos
+  // si el mensaje es de VIA, lo leemos en voz alta
   if (sender === "via") {
     speak(text);
   }
