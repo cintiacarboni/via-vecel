@@ -1,9 +1,7 @@
 {
-  "name": "ViajarIA - VIA",
+  "name": "ViajarIA - Asistente Turística",
   "short_name": "VIA",
-  "description": "Asistente turística inteligente para viajar por Argentina.",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#00c8e2",
