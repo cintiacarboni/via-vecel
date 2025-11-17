@@ -3,13 +3,38 @@ const input = document.getElementById("inputMsg");
 const sendBtn = document.getElementById("send");
 const micBtn = document.getElementById("micBtn");
 
-// 👉 Agrega un mensaje al chat
 function addMessage(text, sender = "via") {
   const div = document.createElement("div");
   div.classList.add("message", sender);
   div.textContent = text;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
+
+  // 🔊 Si el mensaje es de VIA, lo leemos en voz alta
+  if (sender === "via") {
+    speak(text);
+  }
+}
+// 🔊 VOZ DE VIA (Text-to-Speech)
+function speak(text) {
+  // Si el navegador no soporta voz, salimos
+  if (!("speechSynthesis" in window)) return;
+
+  // Pequeño truco para elegir idioma:
+  // si tiene acentos/ñ -> español, si no -> inglés
+  const hasSpanishChars = /[áéíóúñ¿¡]/i.test(text);
+  const lang = hasSpanishChars ? "es-ES" : "en-US";
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang;
+  utterance.rate = 1;        // velocidad normal
+  utterance.pitch = 1;       // tono normal
+  utterance.volume = 1;      // volumen máximo
+
+  window.speechSynthesis.cancel(); // corta cualquier voz anterior
+  window.speechSynthesis.speak(utterance);
+}
+
 }
 
 // 👉 Enviar mensaje al backend /api/chat
@@ -88,4 +113,5 @@ micBtn.addEventListener("click", () => {
   micBtn.classList.add("listening");
   recognition.start();
 });
+
 
