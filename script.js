@@ -19,13 +19,13 @@ const targetLangSelect = document.getElementById("targetLang");
 let interpreterMode = false;
 let translationMode = false;
 let recognition = null;
-let currentTargetLang = "en"; // idioma destino por defecto (podés cambiarlo)
+let currentTargetLang = "en";
 
 // 👇 NUEVO: bandera para saber si VIA está hablando
 let speaking = false;
 
 // ===============================
-// MAPEO DE IDIOMAS (para la voz)
+// MAPEO DE IDIOMAS (para la VOZ del navegador)
 // ===============================
 function mapLangToLocale(code) {
   switch (code) {
@@ -39,8 +39,33 @@ function mapLangToLocale(code) {
       return "fr-FR";
     case "it":
       return "it-IT";
-    // si agregás más idiomas en el select, podés extender acá
+    case "de":
+      return "de-DE";
+    case "ja":
+      return "ja-JP";
+    case "zh":
+      return "zh-CN";
+    case "ko":
+      return "ko-KR";
+    case "ru":
+      return "ru-RU";
+    case "ar":
+      return "ar-SA";
+    case "hi":
+      return "hi-IN";
+    case "nl":
+      return "nl-NL";
+    case "sv":
+      return "sv-SE";
+    case "pl":
+      return "pl-PL";
+    case "uk":
+      return "uk-UA";
+    case "tr":
+      return "tr-TR";
     default:
+      // si viene algo tipo "pt-BR", "zh-CN", etc. intentamos usar el código completo
+      if (code && code.includes("-")) return code;
       return "es-ES";
   }
 }
@@ -75,6 +100,8 @@ function speak(text, langCode) {
 
   utterance.onend = () => {
     speaking = false;
+    // Cuando termina de hablar, si el modo intérprete/traducción sigue activo,
+    // volvemos a prender el micrófono automáticamente
     if (recognition && (interpreterMode || translationMode)) {
       micBtn.classList.add("listening");
       recognition.start();
@@ -102,7 +129,9 @@ function addMessage(text, sender = "via", replyLang = "es") {
 
   // VIA habla solo si hay modo intérprete o traducción activo
   if (sender === "via" && (interpreterMode || translationMode)) {
-    const lang = translationMode ? currentTargetLang : replyLang || "es";
+    // si el backend nos dijo el idioma de la respuesta, lo usamos;
+    // si no, usamos el idioma destino en modo traducción
+    const lang = replyLang || (translationMode ? currentTargetLang : "es");
 
     // Antes de hablar, apagamos el mic para que no se escuche a sí misma
     if (recognition) {
@@ -125,15 +154,20 @@ async function sendMessage(source = "text") {
   input.value = "";
 
   let mode = "chat";
-  if (translationMode) mode = "translation";
-  else if (interpreterMode) mode = "interpreter";
+  let targetLang = null;
+
+  if (translationMode) {
+    mode = "translation";
+    targetLang = currentTargetLang;
+  } else if (interpreterMode) {
+    mode = "interpreter";
+    targetLang = currentTargetLang; // idioma del turista frente a Cintia
+  }
 
   const payload = {
     message: text,
     mode,
-    // 👇 AQUÍ EL CAMBIO IMPORTANTE:
-    // en traducción o intérprete mandamos el idioma destino
-    targetLang: translationMode || interpreterMode ? currentTargetLang : null,
+    targetLang,
     source,
   };
 
@@ -147,6 +181,7 @@ async function sendMessage(source = "text") {
     const data = await res.json();
 
     if (data.reply) {
+      // data.replyLang puede venir con "es", "en", "pt-BR", etc.
       addMessage(data.reply, "via", data.replyLang || "es");
     } else if (data.error) {
       addMessage("Hubo un error: " + data.error, "via");
@@ -182,12 +217,12 @@ if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   recognition = new SpeechRecognition();
-  recognition.lang = "es-ES";
+  recognition.lang = "es-ES"; // idioma base de Cintia para darle instrucciones
   recognition.continuous = false;
   recognition.interimResults = false;
 
   recognition.onresult = (event) => {
-    // Si VIA está hablando, ignoramos lo que se escucha
+    // Si VIA está hablando, ignoramos lo que se escucha (para que no se escuche a sí misma)
     if (speaking) return;
 
     const texto = event.results[event.results.length - 1][0].transcript;
@@ -204,6 +239,8 @@ if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
   recognition.onend = () => {
     micBtn.classList.remove("listening");
 
+    // Si se cortó solo (silencio, etc.) y no está hablando VIA,
+    // volvemos a prenderlo SOLO si el modo intérprete/traducción sigue activo
     if ((interpreterMode || translationMode) && !speaking) {
       micBtn.classList.add("listening");
       recognition.start();
@@ -211,6 +248,7 @@ if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
   };
 
   micBtn.addEventListener("click", () => {
+    // Si estás en modo intérprete o traducción, el mic ya está en automático
     if (interpreterMode || translationMode) {
       addMessage("El micrófono ya está activo en modo automático.", "via");
       return;
@@ -285,5 +323,4 @@ translateToggle.addEventListener("click", () => {
     }
   }
 });
-
 
