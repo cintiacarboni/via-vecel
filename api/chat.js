@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-// 👇 Usa DIRECTO tu clave de OpenAI
+// Usa DIRECTO tu clave de OpenAI
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -34,15 +34,15 @@ Reglas:
 
 🔹 ANTI-CUELGUES
 
-• Si la petición es amplia: “Vamos paso a paso, ¿qué querés resolver primero?”.
-• Si la respuesta será larga: “Te doy una versión corta y sigo si querés.”.
+• Si la petición es amplia: “Vamos paso a paso, ¿qué querés resolver primero?”
+• Si la respuesta será larga: “Te doy una versión corta y sigo si querés.”
 • Nunca usar “bloque 1/2”.
-• Dividir natural: “Primero… Luego… Alternativa…”.
+• Dividir natural: “Primero… Luego… Alternativa…”
 
 🔹 CLIMA
 
 Intentar cargar clima una vez.
-Si falla: “No pude cargar el clima exacto, pero te doy una guía según temporada.”.
+Si falla: “No pude cargar el clima exacto, pero te doy una guía según temporada.”
 
 🔹 MAPAS
 
@@ -52,7 +52,7 @@ Debe:
 • sugerir caminata/taxi/uber,
 • describir rutas simples,
 • ofrecer:
-“Abrir en Google Maps: https://maps.google.com/?q=NombreLugar”.
+“Abrir en Google Maps: https://maps.google.com/?q=NombreLugar”
 
 🔹 SEGURIDAD (TravelSAFE)
 
@@ -95,35 +95,30 @@ Reglas:
 • No recomendar si está cerrado.
 • No forzar si no coincide con lo pedido.
 • Formato:
-“Una opción destacada es [NOMBRE], conocido por [beneficio], a [distancia]. Si querés alternativas económicas, te doy otras.”.
+“Una opción destacada es [NOMBRE], conocido por [beneficio], a [distancia]. Si querés alternativas económicas, te doy otras.”
 
 Categorías: hoteles, cafés, restaurantes, excursiones, agencias, municipios, bodegas, balnearios, atracciones.
 
 🔹 TRADUCTOR / INTÉRPRETE MULTILINGÜE (GLOBAL)
 
-VIA debe funcionar como traductor para cualquier idioma del turista.
+VIA debe funcionar como traductor e intérprete para cualquier idioma del turista.
 
-Detección
-• Detectar idioma del mensaje que recibe.
-• Si el turista cambia de idioma con una frase completa, adaptarse.
+Reglas generales:
+• Detectar idioma del primer mensaje → idioma_usuario.
+• Responder siempre en el idioma actual del usuario (salvo que él pida otra cosa).
+• Si el usuario (Cintia) pide actuar como intérprete entre su español y otro idioma, ayudar con frases, traducciones y mensajes dirigidos a la tercera persona.
+• No decir “estoy traduciendo”, simplemente hacerlo.
 
-Traducción automática
-• Responder siempre en el idioma que corresponda según lo que pida el usuario.
-• Procesar internamente en español.
-• Si Cintia habla en español → traducir al idioma del turista cuando lo pida.
-• Nunca decir “estoy traduciendo”.
-
-Idiomas soportados
-TODOS los idiomas que detecte el sistema: inglés, portugués, francés, italiano, alemán, árabe, chino, japonés, coreano, ruso, hindi, neerlandés, sueco, polaco, ucraniano, etc.
-
-Comandos de ejemplo
+Comandos típicos que debe entender:
+• “Actuá como intérprete entre mi español y un turista coreano.”
+• “Preguntale en portugués qué lugares quiere visitar.”
 • “Traducilo al francés/alemán/italiano/etc.”
 • “Respondé en X.”
 • “Leelo en X.”
 
-Voz
+Voz:
 • Si el turista manda audio → transcribir y responder en su idioma.
-• Si Cintia habla en español → traducir al idioma del turista si lo pide.
+• Si Cintia habla en español → traducir al idioma del turista si ella lo pide.
 
 🔹 PLAN FREE / PRO
 
@@ -133,6 +128,7 @@ FREE
 • itinerarios estándar
 • traducciones básicas
 • recomendaciones normales
+
 Si pide funciones avanzadas:
 “Esto se hace con mi modo VIAGO PRO si está activado.”
 
@@ -161,7 +157,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message, mensaje, mode } = req.body || {};
+    const { message, mensaje, mode, targetLang } = req.body || {};
     const texto = message || mensaje;
 
     if (!texto) {
@@ -172,50 +168,42 @@ export default async function handler(req, res) {
     let userContent = "";
 
     // ===============================
-    // MODO TRADUCCIÓN (AGENTE HACE TODO)
+    // MODO TRADUCCIÓN (el agente decide idiomas)
     // ===============================
     if (finalMode === "translation") {
-      userContent = `
-Estás en MODO TRADUCTOR.
+      let instruccion = `
+Actuá como traductor profesional multilingüe.
+Tenés que traducir el texto que envíe el usuario.
 
-Reglas:
-- El usuario te puede hablar en español u otro idioma.
-- Detectá automáticamente idioma origen y destino según lo que pida:
-  ejemplos: "traducí esto al coreano", "pasalo a inglés para el turista", "ponelo en portugués".
-- Devolvé SOLO el texto traducido, sin explicaciones, sin comillas, sin aclarar de qué idioma a qué idioma.
-- Mantené el tono natural del idioma de destino.
+Si el usuario ya indicó a qué idioma traducir, respetalo.
+`;
 
-Texto a traducir:
+      if (targetLang && targetLang !== "auto") {
+        instruccion += `
+Si el usuario no indicó idioma destino, traducí al idioma cuyo código ISO es "${targetLang}".
+`;
+      } else {
+        instruccion += `
+Si el usuario no indicó idioma destino, elegí el idioma más lógico según el contexto (por ejemplo, del español al idioma del turista o al inglés).
+`;
+      }
+
+      instruccion += `
+Reglas IMPORTANTES:
+- No expliques nada salvo que el usuario lo pida.
+- No agregues comentarios.
+- Devuelve principalmente la traducción.
+
+Texto:
 ${texto}
 `;
-    }
-    // ===============================
-    // MODO INTÉRPRETE (DINÁMICO)
-    // ===============================
-    else if (finalMode === "interpreter") {
-      userContent = `
-Estás en MODO INTÉRPRETE en tiempo casi real entre Cintia (habla español) y turistas de cualquier país.
-
-Reglas:
-- Detectá automáticamente el idioma del mensaje recibido.
-- Si el mensaje está en español y Cintia pide:
-   • "preguntale en X..."  → generá la frase en el idioma X, corta y natural.
-   • "decile en X..."     → igual: respondé en X.
-- Si el mensaje viene en otro idioma (turista): traducilo al ESPAÑOL, como si se lo dijeras a Cintia.
-- No expliques que estás interpretando, no agregues comentarios extra.
-- Respuestas breves, claras y conversacionales.
-
-Mensaje actual:
-${texto}
-`;
-    }
-    // ===============================
-    // MODO CHAT NORMAL
-    // ===============================
-    else {
+      userContent = instruccion;
+    } else {
+      // CHAT normal o INTÉRPRETE → el sistema principal ya explica cómo ser traductor/intérprete turístico.
       userContent = texto;
     }
 
+    // Llamada principal a VIA
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -224,15 +212,39 @@ ${texto}
       ],
     });
 
-    const reply = completion.choices[0].message.content;
+    const reply = completion.choices[0].message.content || "";
+
+    // Segunda llamada chiquita para detectar idioma de la respuesta
+    let replyLang = null;
+    try {
+      const detect = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Devuelve SOLO el código ISO 639-1 del idioma principal del siguiente texto (ej: es, en, pt, fr, it, de, zh, ja, ko, ru, ar, hi, nl, sv, pl, uk). No escribas nada más.",
+          },
+          { role: "user", content: reply },
+        ],
+      });
+
+      replyLang = (detect.choices[0].message.content || "")
+        .trim()
+        .toLowerCase()
+        .slice(0, 5); // por las dudas
+    } catch (e) {
+      replyLang = null;
+    }
 
     return res.status(200).json({
       reply,
-      replyLang: null,
+      replyLang, // el front lo usa para elegir la voz
     });
   } catch (error) {
     console.error("ERROR VIA:", error?.response?.data || error);
     return res.status(500).json({ error: "Error al conectar con VIA" });
   }
 }
+
 
