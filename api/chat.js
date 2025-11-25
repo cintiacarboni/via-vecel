@@ -7,7 +7,7 @@ const client = new OpenAI({
 
 // 🧠 Instrucciones de VIA (prompt principal)
 const SYSTEM = `
- IDENTIDAD
+IDENTIDAD
 
 Nombre: ViajarIA (VIA).
 Estilo: cálido, humano, turístico, simple y profesional.
@@ -162,6 +162,18 @@ Frases cortas.
 Listas claras.
 Nunca inventar datos.
 Priorizar utilidad y experiencia del viajero.
+
+🔹 RESPUESTA TÉCNICA
+
+SIEMPRE devolvé la respuesta en formato JSON con esta forma:
+
+{
+  "text": "...",   // texto final que verá el usuario
+  "lang": "es"     // código ISO 639-1 del idioma principal de "text"
+}
+
+• "lang" puede ser: es, en, pt, fr, it, de, ja, ko, zh, ar, ru, hi, nl, sv, pl, tr, he, el, etc.
+• No incluyas nada fuera del JSON.
 `;
 
 // ===============================
@@ -182,122 +194,87 @@ export default async function handler(req, res) {
     }
 
     const finalMode = mode || "chat";
-
-    let messages = [];
-    let useJson = false; // para intérprete / traducción
-    let replyLang = null;
+    let userContent = "";
 
     // ===============================
     // MODO TRADUCCIÓN
     // ===============================
-    if (finalMode === "translation") {
-      useJson = true;
+    if (finalMode === "translation" && targetLang) {
+      userContent = `
+Actuás como traductor profesional.
 
-      messages = [
-        {
-          role: "system",
-          content: `
-Eres un traductor profesional multilingüe.
-Tu tarea es traducir el texto que te envío al idioma de destino.
+Objetivo:
+- Traducir el texto del usuario al idioma "${targetLang}".
 
 Reglas IMPORTANTES:
-- Mantén el sentido natural, como lo diría una persona nativa.
 - No expliques nada.
-- No agregues saludos ni comentarios.
-- Devuelve SIEMPRE un JSON con la forma:
-{"text":"<traduccion>","lang":"<codigo_idioma_destino>"}
-y NADA más.
+- No agregues comentarios.
+- No saludes.
+- Solo devolvés la traducción final en el campo "text".
+- En el campo "lang" poné el código del idioma de destino ("${targetLang}").
 
-Usa códigos de idioma estándar (ej: "es", "en", "pt-BR", "fr", "zh-CN", "ja", "ko").
-Idioma de destino solicitado: ${targetLang || "auto"}
-`,
-        },
-        {
-          role: "user",
-          content: texto,
-        },
-      ];
+Texto a traducir:
+${texto}
+`;
     }
     // ===============================
     // MODO INTÉRPRETE
     // ===============================
     else if (finalMode === "interpreter") {
-      useJson = true;
+      userContent = `
+Actuás como INTÉRPRETE en tiempo casi real entre Cintia (español) y turistas de cualquier país.
 
-      messages = [
-        {
-          role: "system",
-          content:
-            SYSTEM +
-            `
+Reglas:
+- Detectá automáticamente el idioma del mensaje.
+- Si el mensaje está en un idioma que NO es español:
+  • devolvé en "text" la traducción NATURAL al español de Cintia.
+  • poné "lang": "es".
+- Si el mensaje está en español y la persona pide algo como:
+  • "decile en coreano...", "hablale en inglés...", "respondé en francés..."
+  entonces:
+  • respondé en el idioma pedido.
+  • en "lang" poné el código de ese idioma (por ejemplo "ko", "en", "fr").
+- Mensajes cortos, claros y naturales, como un intérprete humano.
+- Nunca expliques que estás traduciendo, simplemente hacelo.
 
-ADICIONAL – MODO INTÉRPRETE EN TIEMPO REAL
-
-Estás actuando como intérprete entre Cintia (habla español) y un turista.
-El posible idioma principal del turista es: "${targetLang || "auto"}".
-
-Reglas para CADA mensaje que recibas:
-- Detecta el idioma principal del texto.
-- Si el mensaje está principalmente en español (Cintia):
-    • tradúcelo al idioma del turista.
-    • Si Cintia pide explícitamente otro idioma en el mensaje
-      ("hablale en portugués", "decile en alemán", etc.), obedecé esa instrucción
-      aunque el idioma seleccionado sea otro.
-- Si el mensaje está principalmente en otro idioma:
-    • tradúcelo al español de Cintia.
-- No expliques que estás traduciendo, no hagas frases dobles.
-- Responde SOLO con la traducción final, lista para ser dicha en voz alta.
-- Devuelve SIEMPRE un JSON con la forma:
-{"text":"<traduccion>","lang":"<codigo_idioma_de_la_traduccion>"}
-y nada más.
-
-Ejemplos de códigos de idioma: "es", "en", "pt-BR", "fr", "it", "de", "zh-CN", "ja", "ko", "ru", "ar".
-`,
-        },
-        {
-          role: "user",
-          content: texto,
-        },
-      ];
+Mensaje del usuario:
+${texto}
+`;
     }
     // ===============================
     // MODO CHAT NORMAL
     // ===============================
     else {
-      messages = [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: texto },
-      ];
+      userContent = texto;
     }
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
-      messages,
-      ...(useJson ? { response_format: { type: "json_object" } } : {}),
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: userContent },
+      ],
     });
 
-    let raw = completion.choices[0].message.content;
+    const raw = completion.choices[0].message.content || "";
+
     let reply = raw;
+    let replyLang = null;
 
-    if (useJson) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (typeof parsed.text === "string") reply = parsed.text;
-        if (typeof parsed.lang === "string") replyLang = parsed.lang;
-      } catch (e) {
-        // si falla el JSON, devolvemos el texto bruto
-        reply = raw;
-      }
-    }
-
-    // como fallback, en traducción usamos el idioma destino del front
-    if (finalMode === "translation" && !replyLang && targetLang) {
-      replyLang = targetLang;
+    try {
+      const parsed = JSON.parse(raw);
+      reply = parsed.text || raw;
+      replyLang = parsed.lang || null;
+    } catch (e) {
+      // Si por algún motivo no llega JSON válido, mostramos el texto bruto
+      reply = raw;
+      replyLang = null;
     }
 
     return res.status(200).json({
       reply,
-      replyLang: replyLang || null,
+      replyLang,
     });
   } catch (error) {
     console.error("ERROR VIA:", error?.response?.data || error);
