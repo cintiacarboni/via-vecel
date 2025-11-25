@@ -20,17 +20,33 @@
 </head>
 <body>
   <div class="app">
-    <!-- 🔹 HEADER: SOLO TEXTO "ViajarIA" -->
+    <!-- HEADER -->
     <header class="app-header">
       <div class="logo-text">
         <span class="logo-word">Viajar</span><span class="logo-ia">IA</span>
       </div>
     </header>
 
-    <!-- Controles de modos -->
+    <!-- Controles de modos e idioma -->
     <div class="modes">
       <button id="interpToggle">🎧 Intérprete: OFF</button>
       <button id="translateToggle">🌍 Traducción: OFF</button>
+
+      <label for="targetLang">Idioma destino / voz:</label>
+      <select id="targetLang">
+        <option value="auto">Auto (según lo que pida)</option>
+        <option value="es">Español</option>
+        <option value="en">Inglés</option>
+        <option value="pt">Portugués</option>
+        <option value="fr">Francés</option>
+        <option value="it">Italiano</option>
+        <option value="de">Alemán</option>
+        <option value="zh">Chino</option>
+        <option value="ja">Japonés</option>
+        <option value="ko">Coreano</option>
+        <option value="ru">Ruso</option>
+        <option value="ar">Árabe</option>
+      </select>
     </div>
 
     <main id="chat"></main>
@@ -52,5 +68,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
-
