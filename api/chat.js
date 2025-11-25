@@ -190,35 +190,62 @@ export default async function handler(req, res) {
     if (finalMode === "translation" && targetLang) {
       userContent = `
 Actúa como traductor profesional.
-Traduce el siguiente texto al idioma "${targetLang}".
 
-Reglas IMPORTANTES:
-- No expliques nada.
-- No agregues comentarios.
-- No saludes.
-- Devuelve SOLO la traducción, sin texto extra.
+Tu tarea es traducir el texto al idioma indicado: "${targetLang}".
+
+Instrucciones importantes:
+- Detecta el idioma original.
+- Haz una traducción NATURAL y FLUIDA, no palabra por palabra.
+- Respeta el tono (formal / informal) del original.
+- No des explicaciones ni comentarios.
+- Devuelve SOLO el texto traducido, sin comillas ni nada extra.
+
+Texto original:
+${texto}
+`;
+    }
+
+    // ===============================
+    // MODO INTÉRPRETE (ES ↔ IDIOMA TURISTA)
+    // ===============================
+    else if (finalMode === "interpreter" && targetLang) {
+      userContent = `
+Actúa como intérprete simultáneo entre español rioplatense y "${targetLang}".
+
+Reglas:
+- Detecta el idioma del texto de entrada.
+- Si el texto está en español (de Argentina), tradúcelo a "${targetLang}".
+- Si el texto está en "${targetLang}", tradúcelo al español de Argentina.
+- Usa frases cortas, naturales, como en una conversación real.
+- No repitas el texto original.
+- No expliques nada, no saludes.
+- Devuelve SOLO la frase traducida, lista para decirla en voz alta.
+
+Frase a interpretar:
+${texto}
+`;
+    }
+
+    // ===============================
+    // MODO INTÉRPRETE (AUTO-DETECCIÓN)
+    // ===============================
+    else if (finalMode === "interpreter") {
+      userContent = `
+El usuario activó un modo intérprete.
+
+Actúa como intérprete simultáneo:
+- Detecta en qué idioma está el texto.
+- Si no es español, tradúcelo al español de Argentina.
+- Si el usuario menciona explícitamente "preguntale en X", "decilo en X",
+  "traducilo a X", etc., traduce hacia ese idioma X.
+- No expliques nada, no agregues contexto.
+- Devuelve SOLO la traducción.
 
 Texto:
 ${texto}
 `;
     }
-    // ===============================
-    // MODO INTÉRPRETE
-    // ===============================
-    else if (finalMode === "interpreter") {
-      userContent = `
-Actúa como intérprete en una conversación en tiempo casi real.
 
-Reglas:
-- Responde con mensajes cortos, naturales y claros.
-- Usa el mismo idioma que está usando el usuario.
-- Si el usuario mezcla idiomas, prioriza el idioma principal del mensaje.
-- No expliques que eres un intérprete, solo responde como si estuvieras en la charla.
-
-Mensaje del usuario:
-${texto}
-`;
-    }
     // ===============================
     // MODO CHAT NORMAL
     // ===============================
@@ -238,11 +265,10 @@ ${texto}
 
     return res.status(200).json({
       reply,
-      replyLang: null, // si más adelante querés detectar idioma de salida, acá se puede completar
+      replyLang: null, // si más adelante querés detectar idioma de salida, se completa acá
     });
   } catch (error) {
     console.error("ERROR VIA:", error?.response?.data || error);
     return res.status(500).json({ error: "Error al conectar con VIA" });
   }
 }
-
