@@ -21,6 +21,9 @@ let translationMode = false;
 let recognition = null;
 let currentTargetLang = "en";
 
+// 👇 NUEVO: bandera para saber si VIA está hablando
+let speaking = false;
+
 // ===============================
 // MAPEO DE IDIOMAS
 // ===============================
@@ -63,8 +66,29 @@ function speak(text, langCode) {
 
   if (preferredVoice) utterance.voice = preferredVoice;
 
+  // VIA va a hablar
+  speaking = true;
+
   synth.cancel();
   synth.speak(utterance);
+
+  utterance.onend = () => {
+    speaking = false;
+    // Cuando termina de hablar, si el modo intérprete/traducción sigue activo,
+    // volvemos a prender el micrófono automáticamente
+    if (recognition && (interpreterMode || translationMode)) {
+      micBtn.classList.add("listening");
+      recognition.start();
+    }
+  };
+
+  utterance.onerror = () => {
+    speaking = false;
+    if (recognition && (interpreterMode || translationMode)) {
+      micBtn.classList.add("listening");
+      recognition.start();
+    }
+  };
 }
 
 // ===============================
@@ -80,6 +104,13 @@ function addMessage(text, sender = "via", replyLang = "es") {
   // VIA habla solo si hay modo intérprete o traducción activo
   if (sender === "via" && (interpreterMode || translationMode)) {
     const lang = translationMode ? currentTargetLang : replyLang;
+
+    // Antes de hablar, apagamos el mic para que no se escuche a sí misma
+    if (recognition) {
+      recognition.stop();
+      micBtn.classList.remove("listening");
+    }
+
     speak(text, lang);
   }
 }
@@ -155,6 +186,9 @@ if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
   recognition.interimResults = false;
 
   recognition.onresult = (event) => {
+    // Si VIA está hablando, ignoramos lo que se escucha (para que no se escuche a sí misma)
+    if (speaking) return;
+
     const texto = event.results[event.results.length - 1][0].transcript;
     input.value = texto;
     sendMessage("voice");
@@ -169,13 +203,16 @@ if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
   recognition.onend = () => {
     micBtn.classList.remove("listening");
 
-    if (interpreterMode || translationMode) {
+    // Si se cortó solo (silencio, etc.) y no está hablando VIA,
+    // volvemos a prenderlo SOLO si el modo intérprete/traducción sigue activo
+    if ((interpreterMode || translationMode) && !speaking) {
       micBtn.classList.add("listening");
       recognition.start();
     }
   };
 
   micBtn.addEventListener("click", () => {
+    // Si estás en modo intérprete o traducción, el mic ya está en automático
     if (interpreterMode || translationMode) {
       addMessage("El micrófono ya está activo en modo automático.", "via");
       return;
@@ -203,7 +240,7 @@ interpToggle.addEventListener("click", () => {
     interpToggle.classList.add("on");
     interpToggle.textContent = "🎧 Intérprete: ON";
 
-    if (recognition) {
+    if (recognition && !speaking) {
       micBtn.classList.add("listening");
       recognition.start();
     }
@@ -236,7 +273,7 @@ translateToggle.addEventListener("click", () => {
     translateToggle.classList.add("on");
     translateToggle.textContent = "🌍 Traducción: ON";
 
-    if (recognition) {
+    if (recognition && !speaking) {
       micBtn.classList.add("listening");
       recognition.start();
     }
@@ -250,10 +287,4 @@ translateToggle.addEventListener("click", () => {
     }
   }
 });
-
-
-
-
-
-
 
